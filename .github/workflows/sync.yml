@@ -1,4 +1,4 @@
-name: Sync main to server
+name: Sync master to local machine
 
 on:
   push:
@@ -7,15 +7,16 @@ on:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    # 'ubuntu-latest' yerine 'self-hosted' yazıyoruz
+    runs-on: self-hosted 
 
     steps:
-      - name: Sync code to server
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cd ${{ secrets.SERVER_PATH }}
-            git pull origin master
+      # Bu adım kodun en güncel halini bilgisayarındaki runner klasörüne çeker
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Burada kendi proje klasörüne gidip pull yapabilirsin
+      - name: Pull latest changes
+        run: |
+          cd ~/Projects/NewyorkCityTaxiTripSpark
+          git pull origin master
