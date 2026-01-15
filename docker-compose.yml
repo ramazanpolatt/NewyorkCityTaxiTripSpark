@@ -1,0 +1,64 @@
+services:
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    networks:
+      - iceberg-net
+
+  iceberg-rest:
+    image: tabulario/iceberg-rest
+    container_name: iceberg-rest
+    ports:
+      - "8181:8181"
+    environment:
+      - CATALOG_WAREHOUSE=${WAREHOUSE_PATH}
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://minio:9000
+      - CATALOG_S3_ACCESS_KEY_ID=${MINIO_USER}
+      - CATALOG_S3_SECRET_ACCESS_KEY=${MINIO_PASSWORD}
+      - CATALOG_S3_PATH_STYLE_ACCESS=true
+    networks:
+      - iceberg-net
+    depends_on:
+      - minio
+
+  spark-master:
+    image: tabulario/spark-iceberg
+    container_name: spark-master
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    networks:
+      - iceberg-net
+
+  spark-worker:
+    image: tabulario/spark-iceberg
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=1
+
+      - AWS_ACCESS_KEY_ID=${MINIO_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_PASSWORD}
+      - AWS_REGION=${AWS_REGION}
+    networks:
+      - iceberg-net
+    depends_on:
+      - spark-master
+
+networks:
+  iceberg-net:
+    driver: bridge
+
+volumes:
+  minio-data:
