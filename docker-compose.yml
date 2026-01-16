@@ -65,3 +65,5 @@ networks:
   iceberg-net:
     driver: bridge
 
+volumes:
+  minio-data:
