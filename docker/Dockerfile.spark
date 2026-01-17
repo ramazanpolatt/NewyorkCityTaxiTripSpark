@@ -1,0 +1,20 @@
+FROM bitnamilegacy/spark:3.5.1
+USER root
+RUN install_packages curl
+USER 1001
+
+
+# Iceberg Spark runtime (Spark 3.5 / Scala 2.12)
+RUN curl -L \
+  https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.5.2/iceberg-spark-runtime-3.5_2.12-1.5.2.jar \
+  -o /opt/bitnami/spark/jars/iceberg-spark-runtime-3.5_2.12-1.5.2.jar
+
+# Iceberg AWS (for S3 / MinIO)
+RUN curl -L \
+  https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws/1.5.2/iceberg-aws-1.5.2.jar \
+  -o /opt/bitnami/spark/jars/iceberg-aws-1.5.2.jar
+
+# AWS SDK bundle (Iceberg AWS dependency)
+RUN curl -L \
+  https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.25.18/bundle-2.25.18.jar \
+  -o /opt/bitnami/spark/jars/bundle-2.25.18.jar

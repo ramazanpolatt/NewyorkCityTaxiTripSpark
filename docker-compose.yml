@@ -35,10 +35,15 @@ services:
       - minio
 
   spark-master:
-    image: tabulario/spark-iceberg
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.spark
     container_name: spark-master
     environment:
       - SPARK_MODE=master
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${MINIO_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_PASSWORD}
       - AWS_REGION=us-east-1
     ports:
       - "8080:8080" #for spark master web ui
@@ -49,9 +54,10 @@ services:
     volumes:
       - ./src:/opt/spark/apps
 
-
   spark-worker:
-    image: bitnamilegacy/spark:3.5.1
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile.spark
     deploy:
       replicas: 2
     environment:
@@ -66,11 +72,11 @@ services:
       - iceberg-net
     depends_on:
       - spark-master
-    volumes:
-      - ./jars:/opt/spark/jars
+
 networks:
   iceberg-net:
     driver: bridge
 
 volumes:
   minio-data:
+
