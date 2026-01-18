@@ -1,20 +1,35 @@
 FROM bitnamilegacy/spark:3.5.1
+
 USER root
-RUN install_packages curl
-USER 1001
+
+# Install system packages
+RUN install_packages curl python3-pip
+
+# Install Python packages
+RUN pip3 install --no-cache-dir jupyter notebook
+
+ENV PYTHONPATH="${PYTHONPATH}:/opt/bitnami/spark/python:/opt/bitnami/spark/python/lib/py4j-0.10.9.7-src.zip"
+ENV SPARK_HOME="/opt/bitnami/spark"
 
 
-# Iceberg Spark runtime (Spark 3.5 / Scala 2.12)
+
+# Download Iceberg Spark runtime (Spark 3.5 / Scala 2.12)
 RUN curl -L \
   https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.5.2/iceberg-spark-runtime-3.5_2.12-1.5.2.jar \
   -o /opt/bitnami/spark/jars/iceberg-spark-runtime-3.5_2.12-1.5.2.jar
 
-# Iceberg AWS (for S3 / MinIO)
+# Download Iceberg AWS (for S3 / MinIO)
 RUN curl -L \
   https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws/1.5.2/iceberg-aws-1.5.2.jar \
   -o /opt/bitnami/spark/jars/iceberg-aws-1.5.2.jar
 
-# AWS SDK bundle (Iceberg AWS dependency)
+# Download AWS SDK bundle (Iceberg AWS dependency)
 RUN curl -L \
   https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.25.18/bundle-2.25.18.jar \
   -o /opt/bitnami/spark/jars/bundle-2.25.18.jar
+
+
+WORKDIR /opt/spark/apps
+
+# Switch back to non-root user
+USER 1001

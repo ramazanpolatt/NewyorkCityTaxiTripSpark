@@ -4,29 +4,50 @@ from pyspark.sql.functions import input_file_name, regexp_extract, lit
 spark = SparkSession.builder.appName("NYC Taxi to Iceberg").getOrCreate()
 
 taxi_types = ['for_hire_vehicle', 'green_taxi', 'high_volume_for_hire_vehicle', 'yellow_taxi']
+# İşlemek istediğin yılları buraya ekle
+years = [str(y) for y in range(2009, 2026)]
 
 try:
-    # Create namespace
     spark.sql("CREATE NAMESPACE IF NOT EXISTS iceberg.nyc")
 
     for taxi_type in taxi_types:
-        print(f"Processing {taxi_type}...")
+        print(f"--- Starting {taxi_type} ---")
 
-        raw_path = f"s3a://nyc-taxi/Dataset/*/{taxi_type}/*.parquet"
-        df = spark.read.option('mergeSchema', 'true').parquet(raw_path)
+        table_name = f"iceberg.nyc.{taxi_type}"
+        first_run = True
 
-        df = df.withColumn("taxi_type", lit(taxi_type)) \
-            .withColumn("file_year", regexp_extract(input_file_name(), r"Dataset/(\d{4})/", 1))
+        for year in years:
+            raw_path = f"s3a://nyc-taxi/Dataset/{year}/{taxi_type}/*.parquet"
 
-        # Write to Iceberg
-        df.writeTo(f"iceberg.nyc.{taxi_type}") \
-            .tableProperty("write.format.default", "parquet") \
-            .partitionedBy("file_year") \
-            .createOrReplace()
+            try:
 
-        print(f"✓ Completed {taxi_type}")
+                df = spark.read.parquet(raw_path)
 
-    print("All taxi types processed successfully!")
+
+                if df.count() > 0:
+                    print(f"Processing {taxi_type} for Year: {year}...")
+
+                    df = df.withColumn("taxi_type", lit(taxi_type)) \
+                        .withColumn("file_year", lit(year))
+
+                    if first_run:
+
+                        df.writeTo(table_name) \
+                            .tableProperty("write.format.default", "parquet") \
+                            .partitionedBy("file_year") \
+                            .createOrReplace()
+                        first_run = False
+                    else:
+
+                        df.writeTo(table_name).append()
+
+                    print(f"✓ Year {year} appended.")
+
+            except Exception as e:
+
+                continue
+
+        print(f"✓✓ {taxi_type} completely processed.")
 
 finally:
     spark.stop()

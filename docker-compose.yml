@@ -23,11 +23,11 @@ services:
       - CATALOG_WAREHOUSE=s3a://warehouse/
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
       - CATALOG_S3_ENDPOINT=http://minio:9000
-      - CATALOG_S3_ACCESS__KEY__ID=admin
-      - CATALOG_S3_SECRET__ACCESS__KEY=password
+      - CATALOG_S3_ACCESS__KEY__ID=${MINIO_USER}
+      - CATALOG_S3_SECRET__ACCESS__KEY=${MINIO_PASSWORD}
       - CATALOG_S3_PATH__STYLE__ACCESS=true
-      - AWS_ACCESS_KEY_ID=admin
-      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_ACCESS_KEY_ID=${MINIO_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_PASSWORD}
       - AWS_REGION=us-east-1
     networks:
       - iceberg-net
@@ -44,15 +44,18 @@ services:
       - AWS_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=${MINIO_USER}
       - AWS_SECRET_ACCESS_KEY=${MINIO_PASSWORD}
-      - AWS_REGION=us-east-1
     ports:
       - "8080:8080" #for spark master web ui
       - "7077:7077" #for spark workers to connect
       - "8888:8888" #for jupyter
+      - "4040:4040" # Spark Driver UI
     networks:
       - iceberg-net
     volumes:
       - ./src:/opt/spark/apps
+    command: >
+      bash -c "/opt/bitnami/scripts/spark/run.sh & 
+      jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password='' --notebook-dir=/opt/spark/apps"
 
   spark-worker:
     build:
@@ -60,6 +63,8 @@ services:
       dockerfile: ./docker/Dockerfile.spark
     deploy:
       replicas: 2
+    ports:
+      - "8081-8082:8081"
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
